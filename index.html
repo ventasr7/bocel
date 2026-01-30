@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Producción por Tanda y Línea</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; }
+            @page { size: landscape; margin: 0; }
+            #printable-area { display: flex !important; justify-content: center; align-items: center; height: 100vh; }
+        }
+        .print-only { display: none; }
+        
+        /* Tique Horizontal Original */
+        .ticket-box {
+            width: 700px;
+            background: white;
+            border: 4px solid #000;
+            padding: 25px;
+            display: flex;
+            gap: 20px;
+            color: #000;
+        }
+        .qr-side {
+            flex: 0 0 200px;
+            border-left: 2px dashed #000;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .info-side { flex: 1; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        #mobile-view {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #f1f5f9;
+            z-index: 9999;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+    <!-- VISTA MÓVIL AL ESCANEAR -->
+    <div id="mobile-view" class="flex flex-col items-center">
+        <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden mt-10">
+            <div class="bg-slate-900 p-8 text-white text-center">
+                <span class="text-[10px] font-bold opacity-50 uppercase tracking-widest">Información de Paleta</span>
+                <p id="m-id" class="text-6xl font-black mt-2">#000</p>
+            </div>
+            <div class="p-8 space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-2xl">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Tanda</p>
+                        <p id="m-tanda" class="text-xl font-bold text-slate-800">--</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Línea</p>
+                        <p id="m-linea" class="text-xl font-bold text-slate-800">--</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Material</p>
+                    <p id="m-material" class="text-2xl font-black text-slate-900 uppercase">--</p>
+                </div>
+                <div class="text-center py-4">
+                    <p class="text-[10px] font-bold text-red-500 uppercase">Peso Neto</p>
+                    <p id="m-peso" class="text-6xl font-black text-slate-900">0.00 KG</p>
+                </div>
+            </div>
+            <button onclick="window.location.search=''" class="w-full bg-slate-900 text-white py-6 font-bold uppercase tracking-widest">Cerrar Visualizador</button>
+        </div>
+    </div>
+
+    <div id="main-content" class="max-w-7xl mx-auto pt-6 px-4 no-print">
+        
+        <!-- HEADER -->
+        <div class="bg-slate-900 rounded-3xl p-6 text-white flex justify-between items-center mb-6 shadow-xl">
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-tight">Registro de Producción <span class="text-indigo-400">Pro</span></h1>
+                <p class="text-slate-400 text-xs mt-1 font-bold">Consolidado por Tanda y Líneas de Producción</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-bold opacity-50">SIGUIENTE REGISTRO</p>
+                <p id="next-id-label" class="text-3xl font-black text-indigo-400">#001</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- FORMULARIO IZQUIERDA -->
+            <aside class="lg:col-span-4 space-y-6">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="text-sm font-black text-slate-800 uppercase mb-6 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-indigo-600 rounded-full"></span>
+                        Nuevo Ingreso
+                    </h2>
+                    <form id="entryForm" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase">Tanda</label>
+                                <select id="tanda" required class="w-full p-3 bg-slate-50 border-0 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option>
+                                    <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option>
+                                    <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase">Línea</label>
+                                <select id="linea" required class="w-full p-3 bg-slate-50 border-0 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="LPL01">LPL01</option>
+                                    <option value="LPL02">LPL02</option>
+                                    <option value="LFI01">LFI01</option>
+                                    <option value="LFI02">LFI02</option>
+                                    <option value="LPC02">LPC02</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase">Peso Neto (KG)</label>
+                            <input type="number" step="0.01" id="peso" required class="w-full p-4 bg-slate-50 border-0 rounded-xl text-3xl font-black text-indigo-600 outline-none" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase">Material</label>
+                            <select id="tipo" required class="w-full p-3 bg-slate-50 border-0 rounded-xl font-bold outline-none">
+                                <option value="PLÁSTICO">PLÁSTICO</option>
+                                <option value="ESP">ESP</option>
+                                <option value="MASA">MASA</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase">Fecha</label>
+                            <input type="date" id="fecha" required class="w-full p-3 bg-slate-50 border-0 rounded-xl outline-none">
+                        </div>
+                        <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl">
+                            Generar Tique e Imagen
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- CONTENIDO DERECHA -->
+            <main class="lg:col-span-8 space-y-6">
+                
+                <!-- BUSCADOR POR TANDA -->
+                <div class="bg-indigo-600 p-6 rounded-3xl shadow-lg text-white">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 class="text-sm font-black uppercase tracking-widest">Buscador y Consolidado</h2>
+                            <p class="text-indigo-200 text-[10px] font-bold">Resultados por Tanda Seleccionada</p>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <select id="tandaSearch" class="flex-1 md:w-32 p-3 rounded-xl bg-indigo-700 text-white font-black border-0 outline-none">
+                                <option value="TODAS">TODAS</option>
+                                <option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option>
+                                <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option>
+                                <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
+                            </select>
+                            <input type="date" id="dateSearch" class="flex-1 p-3 rounded-xl bg-indigo-700 text-white font-black border-0 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- RESUMEN DE MATERIALES -->
+                    <div id="materialSummary" class="grid grid-cols-3 gap-4 mt-6">
+                        <div class="bg-white/10 p-4 rounded-2xl">
+                            <p class="text-[9px] font-bold opacity-60 uppercase">Plástico</p>
+                            <p id="totalPlastico" class="text-xl font-black">0.00 kg</p>
+                        </div>
+                        <div class="bg-white/10 p-4 rounded-2xl">
+                            <p class="text-[9px] font-bold opacity-60 uppercase">ESP</p>
+                            <p id="totalESP" class="text-xl font-black">0.00 kg</p>
+                        </div>
+                        <div class="bg-white/10 p-4 rounded-2xl">
+                            <p class="text-[9px] font-bold opacity-60 uppercase">Masa</p>
+                            <p id="totalMasa" class="text-xl font-black">0.00 kg</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRO COMPLETO (TABLA) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Historial Completo</h3>
+                        <span id="recordCount" class="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full">0 REGISTROS</span>
+                    </div>
+                    <div class="max-h-[450px] overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 sticky top-0">
+                                <tr class="text-[9px] font-black text-slate-400 uppercase">
+                                    <th class="px-6 py-4">Tique</th>
+                                    <th class="px-6 py-4">Tanda/Línea</th>
+                                    <th class="px-6 py-4">Material</th>
+                                    <th class="px-6 py-4 text-right">Peso</th>
+                                    <th class="px-6 py-4 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-50">
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL TIQUE HORIZONTAL -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white p-8 rounded-[3rem] max-w-4xl w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <span class="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Tique de Producción</span>
+                <button onclick="closeModal()" class="text-4xl text-slate-300 hover:text-slate-900 leading-none">&times;</button>
+            </div>
+
+            <div id="ticket-capture" class="ticket-box mx-auto">
+                <div class="info-side">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="bg-black text-white px-3 py-1 text-[10px] font-black rounded-sm uppercase tracking-widest">Registro Oficial</div>
+                        <div id="v-id" class="text-5xl font-black tracking-tighter">#000</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-y-6 mb-6">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha Registro</p>
+                            <p id="v-fecha" class="font-bold text-lg text-slate-900">0000-00-00</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanda / Línea</p>
+                            <p class="font-bold text-lg"><span id="v-tanda" class="text-indigo-600">--</span> / <span id="v-linea">--</span></p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Paletizado</p>
+                            <p id="v-material" class="text-2xl font-black uppercase text-slate-900">--</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t-[5px] border-black pt-5">
+                        <p class="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] mb-1">Peso Neto Confirmado</p>
+                        <p id="v-peso" class="text-7xl font-black italic tracking-tighter leading-none">0.00 KG</p>
+                    </div>
+                </div>
+                <div class="qr-side">
+                    <div id="qrcode"></div>
+                    <p class="text-[8px] font-black text-center mt-5 text-indigo-400 uppercase tracking-widest">Escanear para<br>Detalles Digitales</p>
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-4 no-print">
+                <button onclick="window.print()" class="flex-1 bg-slate-900 text-white py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all hover:bg-black">Imprimir Tique</button>
+                <button onclick="downloadImage()" class="flex-1 bg-indigo-600 text-white py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all hover:bg-indigo-700 shadow-xl shadow-indigo-100">Guardar Imagen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="printable-area" class="print-only"></div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('DB_PROD_TOTAL_V4')) || [];
+        const form = document.getElementById('entryForm');
+        const tandaSearch = document.getElementById('tandaSearch');
+        const dateSearch = document.getElementById('dateSearch');
+        const tableBody = document.getElementById('tableBody');
+
+        dateSearch.valueAsDate = new Date();
+        document.getElementById('fecha').valueAsDate = new Date();
+
+        function sync() {
+            localStorage.setItem('DB_PROD_TOTAL_V4', JSON.stringify(db));
+            render();
+        }
+
+        function render() {
+            const date = dateSearch.value;
+            const tanda = tandaSearch.value;
+            
+            // Filtrado
+            const filtered = db.filter(r => {
+                const matchDate = r.fecha === date;
+                const matchTanda = tanda === 'TODAS' || r.tanda === tanda;
+                return matchDate && matchTanda;
+            });
+
+            // Siguiente ID
+            const lastId = db.length > 0 ? Math.max(...db.map(x => x.id)) : 0;
+            document.getElementById('next-id-label').innerText = `#${String(lastId + 1).padStart(3, '0')}`;
+
+            // Totales
+            let plastico = 0, esp = 0, masa = 0;
+            tableBody.innerHTML = '';
+            
+            filtered.forEach(r => {
+                if(r.tipo === 'PLÁSTICO') plastico += parseFloat(r.peso);
+                if(r.tipo === 'ESP') esp += parseFloat(r.peso);
+                if(r.tipo === 'MASA') masa += parseFloat(r.peso);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-all";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-black text-indigo-600">#${String(r.id).padStart(3, '0')}</td>
+                    <td class="px-6 py-4">
+                        <span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-[10px] font-black">${r.tanda}</span>
+                        <span class="text-slate-400 text-[10px] font-bold ml-1">${r.linea}</span>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-slate-700 text-xs">${r.tipo}</td>
+                    <td class="px-6 py-4 text-right font-black text-lg text-slate-900">${r.peso} kg</td>
+                    <td class="px-6 py-4 text-center space-x-2">
+                        <button onclick='viewTique(${r.id})' class="text-slate-400 hover:text-indigo-600">👁️</button>
+                        <button onclick='deleteRow(${r.id})' class="text-slate-400 hover:text-red-500">🗑️</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            document.getElementById('totalPlastico').innerText = `${plastico.toFixed(2)} kg`;
+            document.getElementById('totalESP').innerText = `${esp.toFixed(2)} kg`;
+            document.getElementById('totalMasa').innerText = `${masa.toFixed(2)} kg`;
+            document.getElementById('recordCount').innerText = `${filtered.length} REGISTROS`;
+        }
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const lastId = db.length > 0 ? Math.max(...db.map(x => x.id)) : 0;
+            const nuevo = {
+                id: lastId + 1,
+                tanda: document.getElementById('tanda').value,
+                linea: document.getElementById('linea').value,
+                peso: parseFloat(document.getElementById('peso').value).toFixed(2),
+                tipo: document.getElementById('tipo').value,
+                fecha: document.getElementById('fecha').value
+            };
+            db.unshift(nuevo);
+            sync();
+            openModal(nuevo);
+            document.getElementById('peso').value = '';
+        };
+
+        function openModal(r) {
+            document.getElementById('v-id').innerText = `#${String(r.id).padStart(3, '0')}`;
+            document.getElementById('v-fecha').innerText = r.fecha;
+            document.getElementById('v-tanda').innerText = r.tanda;
+            document.getElementById('v-linea').innerText = r.linea;
+            document.getElementById('v-material').innerText = r.tipo;
+            document.getElementById('v-peso').innerText = `${r.peso} KG`;
+
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            // Generar URL para escaneo móvil
+            const raw = `${r.id}|${r.tanda}|${r.linea}|${r.tipo}|${r.peso}|${r.fecha}`;
+            const encoded = btoa(raw);
+            const url = `${window.location.href.split('?')[0]}?view=${encoded}`;
+
+            new QRCode(qrContainer, {
+                text: url,
+                width: 170,
+                height: 170,
+                colorDark: "#000000"
+            });
+
+            setTimeout(() => {
+                const printable = document.getElementById('printable-area');
+                printable.innerHTML = '';
+                printable.appendChild(document.getElementById('ticket-capture').cloneNode(true));
+            }, 300);
+
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function viewTique(id) {
+            const found = db.find(x => x.id === id);
+            if (found) openModal(found);
+        }
+
+        function deleteRow(id) {
+            if(confirm('¿Eliminar registro?')) {
+                db = db.filter(x => x.id !== id);
+                sync();
+            }
+        }
+
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        async function downloadImage() {
+            const canvas = await html2canvas(document.getElementById('ticket-capture'), { scale: 3 });
+            const link = document.createElement('a');
+            link.download = `tique_${document.getElementById('v-id').innerText}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Detección de escaneo QR
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('view')) {
+            const decoded = atob(params.get('view')).split('|');
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('mobile-view').style.display = 'flex';
+            document.getElementById('m-id').innerText = '#' + decoded[0].padStart(3, '0');
+            document.getElementById('m-tanda').innerText = decoded[1];
+            document.getElementById('m-linea').innerText = decoded[2];
+            document.getElementById('m-material').innerText = decoded[3];
+            document.getElementById('m-peso').innerText = decoded[4] + ' KG';
+        }
+
+        tandaSearch.onchange = render;
+        dateSearch.onchange = render;
+        sync();
+    </script>
+</body>
+</html>
