@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Producción - Trazabilidad QR</title>
+    <title>Sistema de Trazabilidad QR - Producción</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
 
         @media print {
             .no-print { display: none !important; }
@@ -18,112 +20,147 @@
             @page { size: landscape; margin: 0; }
             #printable-area { display: flex !important; justify-content: center; align-items: center; height: 100vh; }
         }
+        
         .print-only { display: none; }
         
         .ticket-box {
-            width: 700px;
+            width: 720px;
             background: white;
-            border: 4px solid #000;
-            padding: 25px;
+            border: 5px solid #000;
+            padding: 30px;
             display: flex;
-            gap: 20px;
+            gap: 25px;
             color: #000;
+            position: relative;
         }
+
         .qr-side {
-            flex: 0 0 200px;
-            border-left: 2px dashed #000;
-            padding-left: 20px;
+            flex: 0 0 210px;
+            border-left: 3px dashed #000;
+            padding-left: 25px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
-        .info-side { flex: 1; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* Vista para el escaneo móvil */
+        .info-side { flex: 1; }
+
         #mobile-view {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #f8fafc;
+            background: #0f172a;
             z-index: 9999;
+            color: white;
             padding: 20px;
             overflow-y: auto;
         }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-    <!-- VISTA MÓVIL AL ESCANEAR (Incluye Fecha) -->
+    <!-- VISTA MÓVIL (FICHA DIGITAL AL ESCANEAR QR) -->
     <div id="mobile-view" class="flex flex-col items-center">
-        <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden mt-6 mb-10">
-            <div class="bg-indigo-600 p-8 text-white text-center">
-                <p id="m-fecha-top" class="text-sm font-black opacity-80 mb-2 tracking-widest uppercase">00/00/0000</p>
-                <span class="text-[10px] font-bold opacity-60 uppercase tracking-widest">Paleta Registrada</span>
-                <p id="m-id" class="text-6xl font-black mt-2">#000</p>
+        <div class="w-full max-w-md bg-white rounded-[2.5rem] text-slate-900 shadow-2xl overflow-hidden mt-4">
+            <div class="bg-indigo-600 p-8 text-white">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-[10px] font-extrabold bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">Ficha Técnica Digital</span>
+                    <span id="m-id-tag" class="text-xs font-mono font-bold">#000</span>
+                </div>
+                <h2 class="text-4xl font-black tracking-tighter">Detalles de Paletizado</h2>
             </div>
-            <div class="p-8 space-y-6">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Tanda</p>
-                        <p id="m-tanda" class="text-xl font-black text-slate-800">--</p>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Línea</p>
-                        <p id="m-linea" class="text-xl font-black text-slate-800">--</p>
+            
+            <div class="p-8 space-y-8">
+                <!-- LÍNEA -->
+                <div class="flex items-center gap-5 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-xl">⚙️</div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Línea</p>
+                        <p id="m-linea" class="text-2xl font-black text-slate-800 uppercase">--</p>
                     </div>
                 </div>
-                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Material Registrado</p>
-                    <p id="m-material" class="text-2xl font-black text-slate-900 uppercase">--</p>
+
+                <!-- MATERIAL -->
+                <div class="flex items-center gap-5 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-xl">📦</div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Paletizado</p>
+                        <p id="m-material" class="text-2xl font-black text-slate-800 uppercase">--</p>
+                    </div>
                 </div>
-                <div class="text-center py-4 bg-indigo-50 rounded-[2rem]">
-                    <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">Peso Neto Final</p>
-                    <p id="m-peso" class="text-6xl font-black text-indigo-600">0.00 KG</p>
+
+                <!-- TANDA -->
+                <div class="flex items-center gap-5 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-xl">🕒</div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanda</p>
+                        <p id="m-tanda" class="text-2xl font-black text-indigo-600 uppercase">--</p>
+                    </div>
+                </div>
+
+                <!-- CANTIDAD -->
+                <div class="flex items-center gap-5 border-b border-slate-100 pb-4">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl">⚖️</div>
+                    <div>
+                        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Cantidad (Peso)</p>
+                        <p id="m-peso" class="text-4xl font-black text-slate-900">0.00 KG</p>
+                    </div>
+                </div>
+
+                <!-- FECHA -->
+                <div class="flex items-center gap-5">
+                    <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-xl">🗓️</div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de Registro</p>
+                        <p id="m-fecha" class="text-2xl font-black text-slate-800 uppercase">--</p>
+                    </div>
                 </div>
             </div>
-            <button onclick="window.location.search=''" class="w-full bg-slate-900 text-white py-6 font-black uppercase tracking-widest">Regresar al Panel</button>
+            
+            <button onclick="window.location.search=''" class="w-full bg-slate-900 text-white py-6 font-black uppercase tracking-widest hover:bg-black transition-colors">Volver al Panel</button>
         </div>
     </div>
 
-    <div id="main-content" class="max-w-7xl mx-auto pt-6 px-4 no-print">
+    <!-- CONTENIDO PRINCIPAL -->
+    <div id="main-content" class="max-w-7xl mx-auto pt-8 px-4 no-print">
         
-        <!-- HEADER -->
-        <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row justify-between items-center mb-6 shadow-2xl border-b-4 border-indigo-500">
+        <header class="bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row justify-between items-center mb-8 shadow-2xl border-b-8 border-indigo-600">
             <div>
-                <h1 class="text-3xl font-black uppercase tracking-tighter">Control de Producción</h1>
-                <p class="text-indigo-400 text-xs font-black tracking-widest mt-1 uppercase">Trazabilidad Inteligente con QR</p>
+                <h1 class="text-3xl font-black uppercase tracking-tighter">Control de Trazabilidad</h1>
+                <p class="text-indigo-400 text-xs font-bold tracking-widest mt-1 uppercase">Registro y Generación de Tiques QR</p>
             </div>
-            <div class="text-right mt-4 md:mt-0">
-                <p class="text-[10px] font-black opacity-50 uppercase tracking-widest">Siguiente Paleta</p>
-                <p id="next-id-label" class="text-4xl font-black text-white">#001</p>
+            <div class="text-right mt-4 md:mt-0 bg-white/5 p-4 rounded-2xl border border-white/10">
+                <p class="text-[10px] font-black opacity-50 uppercase tracking-[0.2em]">Código Siguiente</p>
+                <p id="next-id-label" class="text-4xl font-black text-white font-mono">#001</p>
             </div>
-        </div>
+        </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- FORMULARIO IZQUIERDA -->
+            <!-- FORMULARIO -->
             <aside class="lg:col-span-4">
-                <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 sticky top-6">
+                <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
                     <h2 class="text-sm font-black text-slate-800 uppercase mb-8 flex items-center gap-3">
-                        <span class="w-8 h-8 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-xs font-black">1</span>
-                        Registrar Peso
+                        <span class="w-3 h-3 bg-indigo-600 rounded-full"></span>
+                        Nuevo Registro
                     </h2>
-                    <form id="entryForm" class="space-y-5">
+                    <form id="entryForm" class="space-y-6">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase">Tanda</label>
-                                <select id="tanda" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-black text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                                <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Tanda</label>
+                                <select id="tanda" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option>
                                     <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option>
                                     <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase">Línea</label>
-                                <select id="linea" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-black text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                                <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Línea</label>
+                                <select id="linea" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option value="LPL01">LPL01</option>
                                     <option value="LPL02">LPL02</option>
                                     <option value="LFI01">LFI01</option>
@@ -133,88 +170,83 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Peso Neto (KG)</label>
-                            <input type="number" step="0.01" id="peso" required class="w-full p-5 bg-slate-50 border-0 rounded-2xl text-4xl font-black text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="0.00">
+                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Cantidad / Peso (KG)</label>
+                            <input type="number" step="0.01" id="peso" required class="w-full p-5 bg-slate-50 border-0 rounded-2xl text-4xl font-black text-indigo-600 outline-none" placeholder="0.00">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Material</label>
-                            <select id="tipo" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-black text-slate-700 outline-none">
+                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Material Paletizado</label>
+                            <select id="tipo" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-slate-700 outline-none">
                                 <option value="PLÁSTICO">PLÁSTICO</option>
                                 <option value="ESP">ESP</option>
                                 <option value="MASA">MASA</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Fecha de Proceso</label>
-                            <input type="date" id="fecha" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-black text-slate-700 outline-none">
+                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Fecha</label>
+                            <input type="date" id="fecha" required class="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold outline-none">
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-slate-900 text-white py-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-100">
-                            Generar Tique y QR
+                        <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white py-6 rounded-3xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl">
+                            Generar Tique de Salida
                         </button>
                     </form>
                 </div>
             </aside>
 
-            <!-- CONTENIDO DERECHA -->
-            <main class="lg:col-span-8 space-y-6">
+            <!-- PANEL DE CONTROL Y BUSCADOR -->
+            <main class="lg:col-span-8 space-y-8">
                 
-                <!-- BUSCADOR POR TANDA Y CONSOLIDADO -->
-                <div class="bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl text-white">
+                <div class="bg-indigo-600 p-8 rounded-[3rem] shadow-xl text-white">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-xl">🔍</div>
-                            <div>
-                                <h2 class="text-lg font-black uppercase tracking-widest">Consolidado por Tanda</h2>
-                                <p class="text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]">Filtro dinámico de producción</p>
-                            </div>
+                        <div>
+                            <h2 class="text-xl font-black uppercase tracking-tight">Buscador de Tanda</h2>
+                            <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">Consolidado por material</p>
                         </div>
                         <div class="flex gap-3 w-full md:w-auto">
-                            <select id="tandaSearch" class="flex-1 md:w-40 p-4 rounded-2xl bg-slate-800 text-white font-black border-0 outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="TODAS">TODAS LAS TANDAS</option>
+                            <select id="tandaSearch" class="flex-1 md:w-48 p-4 rounded-2xl bg-indigo-700 text-white font-black border-0 outline-none">
+                                <option value="TODAS">TODAS</option>
                                 <option value="A1">TANDA A1</option><option value="A2">TANDA A2</option><option value="A3">TANDA A3</option>
                                 <option value="B1">TANDA B1</option><option value="B2">TANDA B2</option><option value="B3">TANDA B3</option>
                                 <option value="C1">TANDA C1</option><option value="C2">TANDA C2</option><option value="C3">TANDA C3</option>
                             </select>
-                            <input type="date" id="dateSearch" class="flex-1 p-4 rounded-2xl bg-slate-800 text-white font-black border-0 outline-none">
+                            <input type="date" id="dateSearch" class="flex-1 p-4 rounded-2xl bg-indigo-700 text-white font-black border-0 outline-none">
                         </div>
                     </div>
 
-                    <!-- RESUMEN DE MATERIALES -->
-                    <div id="materialSummary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-slate-800/50 p-6 rounded-[2rem] border border-slate-700/50">
-                            <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Total Plástico</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="bg-white/10 p-6 rounded-[2rem] border border-white/10">
+                            <p class="text-[9px] font-black opacity-60 uppercase mb-1">Total Plástico</p>
                             <p id="totalPlastico" class="text-3xl font-black">0.00 kg</p>
                         </div>
-                        <div class="bg-slate-800/50 p-6 rounded-[2rem] border border-slate-700/50">
-                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total ESP</p>
+                        <div class="bg-white/10 p-6 rounded-[2rem] border border-white/10">
+                            <p class="text-[9px] font-black opacity-60 uppercase mb-1">Total ESP</p>
                             <p id="totalESP" class="text-3xl font-black">0.00 kg</p>
                         </div>
-                        <div class="bg-slate-800/50 p-6 rounded-[2rem] border border-slate-700/50">
-                            <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Total Masa</p>
+                        <div class="bg-white/10 p-6 rounded-[2rem] border border-white/10">
+                            <p class="text-[9px] font-black opacity-60 uppercase mb-1">Total Masa</p>
                             <p id="totalMasa" class="text-3xl font-black">0.00 kg</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- REGISTRO COMPLETO (TABLA) -->
-                <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                <!-- HISTORIAL -->
+                <div class="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro Completo de Paletas</h3>
-                        <span id="recordCount" class="text-[10px] font-black bg-indigo-600 text-white px-4 py-1.5 rounded-full uppercase tracking-widest">0 REGISTROS</span>
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro Completo</h3>
+                        <span id="recordCount" class="text-[10px] font-black bg-slate-900 text-white px-4 py-1.5 rounded-full uppercase">0 REGISTROS</span>
                     </div>
                     <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 sticky top-0 z-10">
-                                <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                    <th class="px-8 py-5">Tique</th>
+                                <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    <th class="px-8 py-5">N° Código</th>
                                     <th class="px-8 py-5">Tanda / Línea</th>
                                     <th class="px-8 py-5">Material</th>
-                                    <th class="px-8 py-5 text-right">Peso Neto</th>
-                                    <th class="px-8 py-5 text-center">Gestión</th>
+                                    <th class="px-8 py-5 text-right">Cantidad</th>
+                                    <th class="px-8 py-5 text-center">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="divide-y divide-slate-50">
-                                <!-- Dinámico -->
+                                <!-- Filas dinámicas -->
                             </tbody>
                         </table>
                     </div>
@@ -223,54 +255,58 @@
         </div>
     </div>
 
-    <!-- MODAL TIQUE HORIZONTAL -->
+    <!-- MODAL DE TIQUES (HORIZONTAL) -->
     <div id="modal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-10 rounded-[3rem] max-w-4xl w-full shadow-2xl relative overflow-hidden">
-            <div class="flex justify-between items-center mb-8">
+        <div class="bg-white p-10 rounded-[3.5rem] max-w-4xl w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-10">
                 <div class="flex items-center gap-3">
-                    <div class="w-3 h-3 bg-indigo-600 rounded-full animate-pulse"></div>
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tique de Trazabilidad Listo</span>
+                    <div class="w-4 h-4 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tique Listo para Impresión</span>
                 </div>
-                <button onclick="closeModal()" class="text-4xl text-slate-200 hover:text-slate-900 transition-colors">&times;</button>
+                <button onclick="closeModal()" class="text-4xl text-slate-300 hover:text-slate-900 transition-colors">&times;</button>
             </div>
 
-            <!-- Tique Horizontal Original -->
+            <!-- Estructura del Tique Horizontal -->
             <div id="ticket-capture" class="ticket-box mx-auto">
                 <div class="info-side">
-                    <div class="flex justify-between items-start mb-8">
-                        <div class="bg-black text-white px-3 py-1 text-[10px] font-black rounded-sm uppercase tracking-widest">Ficha de Producción</div>
-                        <div id="v-id" class="text-5xl font-black tracking-tighter">#000</div>
+                    <div class="flex justify-between items-start mb-10">
+                        <div class="bg-black text-white px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-widest">Control Interno</div>
+                        <div id="v-id" class="text-5xl font-black font-mono tracking-tighter">#000</div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-y-8 mb-8">
+                    <div class="grid grid-cols-2 gap-y-10 mb-10">
                         <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha Registro</p>
-                            <p id="v-fecha" class="font-black text-xl text-slate-900">0000-00-00</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Línea de Producción</p>
+                            <p id="v-linea" class="font-black text-2xl text-slate-900">--</p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanda / Línea</p>
-                            <p class="font-black text-xl"><span id="v-tanda" class="text-indigo-600">--</span> / <span id="v-linea">--</span></p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanda</p>
+                            <p id="v-tanda" class="font-black text-2xl text-indigo-600">--</p>
                         </div>
                         <div class="col-span-2">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Material del Proceso</p>
-                            <p id="v-material" class="text-3xl font-black uppercase text-slate-900 leading-tight">--</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Material Paletizado</p>
+                            <p id="v-material" class="text-4xl font-black uppercase text-slate-900">--</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
+                            <p id="v-fecha" class="font-black text-xl text-slate-700">0000-00-00</p>
                         </div>
                     </div>
 
-                    <div class="border-t-[6px] border-black pt-6">
-                        <p class="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] mb-1">Peso Neto Final</p>
+                    <div class="border-t-8 border-black pt-8">
+                        <p class="text-[10px] font-black text-red-600 uppercase tracking-[0.4em] mb-1">Cantidad Neto (KG)</p>
                         <p id="v-peso" class="text-8xl font-black italic tracking-tighter leading-none">0.00 KG</p>
                     </div>
                 </div>
                 <div class="qr-side">
                     <div id="qrcode"></div>
-                    <p class="text-[9px] font-black text-center mt-6 text-slate-400 uppercase tracking-widest leading-relaxed">Escanear para<br>Detalles con Fecha</p>
+                    <p class="text-[9px] font-black text-center mt-8 text-slate-400 uppercase tracking-widest leading-relaxed">Escaneo de Ficha<br>Digital Detallada</p>
                 </div>
             </div>
 
-            <div class="mt-10 flex gap-4 no-print">
-                <button onclick="window.print()" class="flex-1 bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all hover:bg-black">Imprimir Ficha</button>
-                <button onclick="downloadImage()" class="flex-1 bg-indigo-600 text-white py-6 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all hover:bg-indigo-700">Guardar Imagen</button>
+            <div class="mt-12 flex gap-5 no-print">
+                <button onclick="window.print()" class="flex-1 bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all">Imprimir Ficha</button>
+                <button onclick="downloadImage()" class="flex-1 bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200">Guardar como PNG</button>
             </div>
         </div>
     </div>
@@ -279,18 +315,18 @@
 
     <script>
         // --- BASE DE DATOS LOCAL ---
-        let db = JSON.parse(localStorage.getItem('DB_PROD_FINAL_V5')) || [];
+        let db = JSON.parse(localStorage.getItem('DB_PROD_FICHA_DIGITAL_V1')) || [];
         const form = document.getElementById('entryForm');
         const tandaSearch = document.getElementById('tandaSearch');
         const dateSearch = document.getElementById('dateSearch');
         const tableBody = document.getElementById('tableBody');
 
-        // Inicializar Fechas
+        // Setup Fechas
         dateSearch.valueAsDate = new Date();
         document.getElementById('fecha').valueAsDate = new Date();
 
         function sync() {
-            localStorage.setItem('DB_PROD_FINAL_V5', JSON.stringify(db));
+            localStorage.setItem('DB_PROD_FICHA_DIGITAL_V1', JSON.stringify(db));
             render();
         }
 
@@ -298,18 +334,17 @@
             const date = dateSearch.value;
             const tanda = tandaSearch.value;
             
-            // Filtrado dinámico
             const filtered = db.filter(r => {
                 const matchDate = r.fecha === date;
                 const matchTanda = tanda === 'TODAS' || r.tanda === tanda;
                 return matchDate && matchTanda;
             });
 
-            // Siguiente ID Global
+            // ID Siguiente
             const lastId = db.length > 0 ? Math.max(...db.map(x => x.id)) : 0;
             document.getElementById('next-id-label').innerText = `#${String(lastId + 1).padStart(3, '0')}`;
 
-            // Reset de Totales
+            // Totales
             let plastico = 0, esp = 0, masa = 0;
             tableBody.innerHTML = '';
             
@@ -321,17 +356,19 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-all group";
                 tr.innerHTML = `
-                    <td class="px-8 py-5 font-black text-indigo-600 text-lg">#${String(r.id).padStart(3, '0')}</td>
-                    <td class="px-8 py-5">
-                        <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase">${r.tanda}</span>
-                        <span class="text-slate-400 text-[10px] font-black ml-2 uppercase tracking-widest">${r.linea}</span>
+                    <td class="px-8 py-6 font-black text-indigo-600 text-lg font-mono">#${String(r.id).padStart(3, '0')}</td>
+                    <td class="px-8 py-6">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-black uppercase text-slate-900">${r.tanda}</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${r.linea}</span>
+                        </div>
                     </td>
-                    <td class="px-8 py-5 font-black text-slate-700 text-xs uppercase tracking-widest">${r.tipo}</td>
-                    <td class="px-8 py-5 text-right font-black text-xl text-slate-900">${r.peso} kg</td>
-                    <td class="px-8 py-5 text-center">
+                    <td class="px-8 py-6 font-black text-slate-700 text-xs uppercase tracking-widest">${r.tipo}</td>
+                    <td class="px-8 py-6 text-right font-black text-xl text-slate-900">${r.peso} kg</td>
+                    <td class="px-8 py-6 text-center">
                         <div class="flex justify-center gap-2">
-                            <button onclick='viewTique(${r.id})' class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all">👁️</button>
-                            <button onclick='deleteRow(${r.id})' class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-300 hover:bg-red-500 hover:text-white transition-all">🗑️</button>
+                            <button onclick='viewTique(${r.id})' class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all">👁️</button>
+                            <button onclick='deleteRow(${r.id})' class="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-300 hover:bg-red-500 hover:text-white transition-all">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -372,35 +409,36 @@
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = '';
             
-            // EL QR AHORA INCLUYE LA FECHA (6to parámetro)
-            const raw = `${r.id}|${r.tanda}|${r.linea}|${r.tipo}|${r.peso}|${r.fecha}`;
-            const encoded = btoa(unescape(encodeURIComponent(raw)));
-            const url = `${window.location.href.split('?')[0]}?view=${encoded}`;
+            // CODIFICACIÓN PARA EL QR (Inlcuye todos los campos en orden)
+            const rawData = `${r.linea}|${r.tipo}|${r.tanda}|${r.peso}|${r.fecha}|${r.id}`;
+            const encoded = btoa(unescape(encodeURIComponent(rawData)));
+            const scanUrl = `${window.location.href.split('?')[0]}?qr=${encoded}`;
 
             new QRCode(qrContainer, {
-                text: url,
-                width: 175,
-                height: 175,
+                text: scanUrl,
+                width: 180,
+                height: 180,
                 colorDark: "#000000",
-                correctLevel: QRCode.CorrectLevel.M
+                correctLevel: QRCode.CorrectLevel.H
             });
 
+            // Preparar para impresión
             setTimeout(() => {
                 const printable = document.getElementById('printable-area');
                 printable.innerHTML = '';
                 printable.appendChild(document.getElementById('ticket-capture').cloneNode(true));
-            }, 300);
+            }, 400);
 
             document.getElementById('modal').classList.remove('hidden');
         }
 
         function viewTique(id) {
-            const found = db.find(x => x.id === id);
-            if (found) openModal(found);
+            const r = db.find(x => x.id === id);
+            if (r) openModal(r);
         }
 
         function deleteRow(id) {
-            if(confirm('¿Eliminar registro permanentemente?')) {
+            if(confirm('¿Seguro que desea eliminar este registro?')) {
                 db = db.filter(x => x.id !== id);
                 sync();
             }
@@ -411,28 +449,28 @@
         async function downloadImage() {
             const canvas = await html2canvas(document.getElementById('ticket-capture'), { scale: 3 });
             const link = document.createElement('a');
-            link.download = `tique_${document.getElementById('v-id').innerText}_${document.getElementById('v-fecha').innerText}.png`;
+            link.download = `TIQUE_N${document.getElementById('v-id').innerText}_${document.getElementById('v-fecha').innerText}.png`;
             link.href = canvas.toDataURL();
             link.click();
         }
 
-        // Lógica de detección de escaneo (Móvil)
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('view')) {
+        // --- LÓGICA DE ESCANEO QR (MÓVIL) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('qr')) {
             try {
-                const decoded = decodeURIComponent(escape(atob(params.get('view')))).split('|');
+                const data = decodeURIComponent(escape(atob(urlParams.get('qr')))).split('|');
+                // Formato: LINEA|MATERIAL|TANDA|CANTIDAD|FECHA|ID
                 document.getElementById('main-content').style.display = 'none';
                 document.getElementById('mobile-view').style.display = 'flex';
                 
-                document.getElementById('m-id').innerText = '#' + decoded[0].padStart(3, '0');
-                document.getElementById('m-tanda').innerText = decoded[1];
-                document.getElementById('m-linea').innerText = decoded[2];
-                document.getElementById('m-material').innerText = decoded[3];
-                document.getElementById('m-peso').innerText = decoded[4] + ' KG';
-                // FECHA EN EL ESCANEO
-                document.getElementById('m-fecha-top').innerText = decoded[5];
+                document.getElementById('m-linea').innerText = data[0];
+                document.getElementById('m-material').innerText = data[1];
+                document.getElementById('m-tanda').innerText = data[2];
+                document.getElementById('m-peso').innerText = data[3] + ' KG';
+                document.getElementById('m-fecha').innerText = data[4];
+                document.getElementById('m-id-tag').innerText = '#' + String(data[5]).padStart(3, '0');
             } catch(e) {
-                console.error("Error al procesar el código QR");
+                console.error("Error al decodificar QR");
             }
         }
 
